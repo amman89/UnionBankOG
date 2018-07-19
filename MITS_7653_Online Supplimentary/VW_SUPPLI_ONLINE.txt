@@ -1,0 +1,267 @@
+CREATE OR REPLACE FORCE VIEW VW_SUPPLI_ONLINE
+(
+   TXNDATE,
+   VALUEDATE,
+   GLOBALTXNNO,
+   TRACERNO,
+   GLMAPCODE,
+   GLTITTLE,
+   PARTICULARS,
+   GLDTCLIENTACCNO,
+   GLCURRENCY,
+   BATCHNO,
+   GLDTDEBIT,
+   GLDTCREDIT,
+   ENTRYUSER,
+   POSTINGUSER,
+   OWNERBRANCHID,
+   INITIATORBRANCHID,
+   OWNEREBRANCH,
+   INITIATORBRANCH,
+   CASH,
+   TRANSFER,
+   CLEARIN,
+   CLIENT_DRCR,
+   CLIENT_AC,
+   CLIENT_NAME,
+   GLDTINSTRUMENTNO
+)
+AS
+   SELECT TXNDATE,
+          VALUEDATE,
+          GLOBALTXNNO,
+          TRACERNO,
+          GLMAPCODE,
+          GLDESCRIPTION AS GLTITTLE,
+          PARTICULARS,
+          GLDTCLIENTACCNO,
+          GLCURRENCY,
+          BATCHNO,
+          GLDTDEBIT,
+          GLDTCREDIT,
+          ENTRYUSER,
+          POSTINGUSER,
+          OWNERBRANCHID,
+          INITIATORBRANCHID,
+          A.BNAME AS OWNEREBRANCH,
+          B.BNAME AS INITIATORBRANCH,
+          CASH,
+          TRANSFER,
+          CLEARIN,
+          CLIENT_DRCR,
+          CLIENT_AC,
+          CLIENT_NAME,
+          GLDTINSTRUMENTNO
+     FROM (SELECT GLDTDATE AS TXNDATE,
+                  GLDTDATE AS VALUEDATE,
+                  GLDGLOBALTXNNO AS GLOBALTXNNO,
+                  GLDTCODE AS TRACERNO,
+                  (CASE
+                      WHEN GLDTCLIENTACCNO IS NULL
+                      THEN
+                         CASE
+                            WHEN    GLDTINSTRUMENTNO IS NULL
+                                 OR UPPER (GLDTINSTRUMENTNO) = 'V-'
+                            THEN
+                               GLDTDESCRIPTION
+                            ELSE
+                                  GLDTDESCRIPTION
+                               || CHR (13)
+                               || CHR (10)
+                               || 'Instrument No : '
+                               || GLDTINSTRUMENTNO
+                         END
+                      ELSE
+                         CASE
+                            WHEN    GLDTINSTRUMENTNO IS NULL
+                                 OR UPPER (GLDTINSTRUMENTNO) = 'V-'
+                            THEN
+                               GLDTDESCRIPTION || ' for ' || GLDTCLIENTACCNO
+                            ELSE
+                                  GLDTDESCRIPTION
+                               || ' for'
+                               || CHR (13)
+                               || CHR (10)
+                               || 'A/C No :'
+                               || GLDTCLIENTACCNO
+                               || CHR (13)
+                               || CHR (10)
+                               || ' Instrument No: '
+                               || GLDTINSTRUMENTNO
+                         END
+                   END)
+                     AS PARTICULARS,
+                  GLDTGLID,
+                  GLDTBATCHNO AS BATCHNO,
+                  GLDTCLIENTACCNO,
+                  GLDTDEBIT,
+                  GLDTCREDIT,
+                  (CASE
+                      WHEN GLDTBRANCHID = GLDTORIGINATINGBRID
+                      THEN
+                         GLDCREATEDBYAPPUSER
+                      ELSE
+                            GLDCREATEDBYAPPUSER
+                         || '('
+                         || GLDTORIGINATINGBRID
+                         || ')'
+                   END)
+                     AS ENTRYUSER,
+                  (CASE
+                      WHEN GLDTBRANCHID = GLDTORIGINATINGBRID
+                      THEN
+                         GLDMODIFIEDBYAPPUSER
+                      ELSE
+                            GLDMODIFIEDBYAPPUSER
+                         || '('
+                         || GLDTORIGINATINGBRID
+                         || ')'
+                   END)
+                     AS POSTINGUSER,
+                  TO_CHAR (GLDTBRANCHID) AS OWNERBRANCHID,
+                  TO_CHAR (GLDTORIGINATINGBRID) AS INITIATORBRANCHID,
+                  (CASE
+                      WHEN SUBSTR (GLDTTYPE, 3, 1) IN (1, 4)
+                      THEN
+                         GLDTDEBIT + GLDTCREDIT
+                      ELSE
+                         0
+                   END)
+                     AS CASH,
+                  (CASE
+                      WHEN SUBSTR (GLDTTYPE, 3, 1) = 2
+                      THEN
+                         GLDTDEBIT + GLDTCREDIT
+                      ELSE
+                         0
+                   END)
+                     AS TRANSFER,
+                  (CASE
+                      WHEN SUBSTR (GLDTTYPE, 3, 1) = 3
+                      THEN
+                         GLDTDEBIT + GLDTCREDIT
+                      ELSE
+                         0
+                   END)
+                     AS CLEARIN,
+                  (CASE
+                      WHEN SUBSTR (GLDTTYPE, 1, 1) = 1
+                      THEN
+                         'Debit'
+                      ELSE
+                         CASE
+                            WHEN SUBSTR (GLDTTYPE, 1, 1) = 2 THEN 'Credit'
+                            ELSE 'N'
+                         END
+                   END)
+                     AS CLIENT_DRCR,
+                  SUBSTR (
+                     EXTRACT_NUMBER (
+                        (CASE
+                            WHEN GLDTCLIENTACCNO IS NULL
+                            THEN
+                               CASE
+                                  WHEN    GLDTINSTRUMENTNO IS NULL
+                                       OR UPPER (GLDTINSTRUMENTNO) = 'V-'
+                                  THEN
+                                     GLDTDESCRIPTION
+                                  ELSE
+                                        GLDTDESCRIPTION
+                                     || CHR (13)
+                                     || CHR (10)
+                                     || 'Instrument No : '
+                                     || GLDTINSTRUMENTNO
+                               END
+                            ELSE
+                               CASE
+                                  WHEN    GLDTINSTRUMENTNO IS NULL
+                                       OR UPPER (GLDTINSTRUMENTNO) = 'V-'
+                                  THEN
+                                        GLDTDESCRIPTION
+                                     || ' for '
+                                     || GLDTCLIENTACCNO
+                                  ELSE
+                                        GLDTDESCRIPTION
+                                     || ' for'
+                                     || CHR (13)
+                                     || CHR (10)
+                                     || 'A/C No :'
+                                     || GLDTCLIENTACCNO
+                                     || CHR (13)
+                                     || CHR (10)
+                                     || ' Instrument No: '
+                                     || GLDTINSTRUMENTNO
+                               END
+                         END)),
+                     1,
+                     13)
+                     CLIENT_AC,
+                  (GET_ACCNAME(
+                             TRIM (
+                                SUBSTR (
+                                   EXTRACT_NUMBER (
+                                      (CASE
+                                          WHEN GLDTCLIENTACCNO IS NULL
+                                          THEN
+                                             CASE
+                                                WHEN    GLDTINSTRUMENTNO
+                                                           IS NULL
+                                                     OR UPPER (
+                                                           GLDTINSTRUMENTNO) =
+                                                           'V-'
+                                                THEN
+                                                   GLDTDESCRIPTION
+                                                ELSE
+                                                      GLDTDESCRIPTION
+                                                   || CHR (13)
+                                                   || CHR (10)
+                                                   || 'Instrument No : '
+                                                   || GLDTINSTRUMENTNO
+                                             END
+                                          ELSE
+                                             CASE
+                                                WHEN    GLDTINSTRUMENTNO
+                                                           IS NULL
+                                                     OR UPPER (
+                                                           GLDTINSTRUMENTNO) =
+                                                           'V-'
+                                                THEN
+                                                      GLDTDESCRIPTION
+                                                   || ' for '
+                                                   || GLDTCLIENTACCNO
+                                                ELSE
+                                                      GLDTDESCRIPTION
+                                                   || ' for'
+                                                   || CHR (13)
+                                                   || CHR (10)
+                                                   || 'A/C No :'
+                                                   || GLDTCLIENTACCNO
+                                                   || CHR (13)
+                                                   || CHR (10)
+                                                   || ' Instrument No: '
+                                                   || GLDTINSTRUMENTNO
+                                             END
+                                       END)),
+                                   1,
+                                   13))))
+                     CLIENT_NAME,
+                  GLDTINSTRUMENTNO
+             FROM VW_ALL_GL_TXN
+            WHERE     UPPER (GLDTISVALID) = 'TRUE'
+                  AND GLDTBRANCHID <> GLDTORIGINATINGBRID
+                  AND GLDTGLID =
+                         (SELECT MCCY_IBGL
+                            FROM MCCY_IB_SPOTEX_GLMAPPING
+                           WHERE UPPER (MCCY_CCYCODE) = UPPER ('BDT'))) D,
+          GLACCOUNT,
+          BRANCH A,
+          BRANCH B
+    WHERE     GLID = GLDTGLID
+          AND OWNERBRANCHID = A.BID
+          AND INITIATORBRANCHID = B.BID;
+
+CREATE OR REPLACE PUBLIC SYNONYM VW_SUPPLI_ONLINE FOR VW_SUPPLI_ONLINE;
+
+GRANT SELECT ON VW_SUPPLI_ONLINE TO APP_ADMIN_ROLE;
+
+GRANT SELECT ON VW_SUPPLI_ONLINE TO APP_USR_ROLE;
